@@ -5,11 +5,16 @@ from sys import stdin, stdout
 class Calc:
 
     def __init__(self):
-        
         self.the_stack = []
+        self.temp_stack = [] # the stack during a transaction
+
+    def calculate(self, data):
+        value = self.parse(data)
+        if value == ERR_INPUT:
+            return ERR_INPUT
+        return self.execute(value)
 
     def parse(self, data):
-        
         elements = data.split()
         values = []
         for i in range(len(elements)):
@@ -21,7 +26,6 @@ class Calc:
         return values
 
     def parseSingle(self, data):
-
         # I currently have python 3.8 installed, would use "match" here with 3.10
         if data == "+":
             return ADD
@@ -40,38 +44,36 @@ class Calc:
         return data
 
     def execute(self, values):
+        last = ""
 
-        last = 0
+        # start transaction
+        self.temp_stack = self.the_stack.copy()
         for i in range(len(values)):
             last = self.executeSingle(values[i])
+            if last == ERR_OPS:
+                return ERR_OPS
+
+        # write transaction
+        self.the_stack = self.temp_stack
         return last
-    
+
     def executeSingle(self, value):
-        
         if type(value) is int:
-            self.the_stack.append(value)
+            self.temp_stack.append(value)
             return value
 
-        if len(self.the_stack) < value.operands:
+        if len(self.temp_stack) < value.operands:
             return ERR_OPS
 
         params = []
         for i in range(value.operands):
-            params.append(self.the_stack.pop())
+            params.append(self.temp_stack.pop())
 
         result = value.fn(*params)
-        self.the_stack.append(result)
+        self.temp_stack.append(result)
         return result
 
-    def process(self, data):
-        
-        value = self.parse(data)
-        if value == ERR_INPUT:
-            return ERR_INPUT
-        return self.execute(value)
-
 class Error:
-    
     def __init__(self, value):
         self.value = value
 
@@ -82,7 +84,6 @@ ERR_INPUT = Error("Error: Invalid input")
 ERR_OPS   = Error("Error: Insufficient operands")
 
 class Operator:
-    
     def __init__(self, text, operands, fn):
         self.text = text
         self.operands = operands
@@ -94,7 +95,6 @@ MUL = Operator("*", 2, lambda a, b: b * a)
 DIV = Operator("/", 2, lambda a, b: b / a)
 
 def clInterface(reader, writer):
-    
     calc = Calc()
 
     writer.write("> ")
@@ -103,16 +103,14 @@ def clInterface(reader, writer):
         line = line.strip()
         if line == "q":
             return
-        writer.write("{}".format(calc.process(line)))
+        writer.write("{}".format(calc.calculate(line)))
         writer.write("\n> ")
 
 if __name__ == "__main__":
     clInterface(stdin, stdout)
 
 class TestClInterface(unittest.TestCase):
-    
     def testClInterface(self):
-
         cases = [
             # exit
             ["", "> "],
@@ -149,7 +147,6 @@ class TestClInterface(unittest.TestCase):
             self.assertEqual(w.getvalue(), cases[i][1])
     
 class TestCalc(unittest.TestCase):
-    
     def testParse(self):
         c = Calc()
 
@@ -179,7 +176,6 @@ class TestCalc(unittest.TestCase):
         self.assertEqual(c.parse("2, w, -"), ERR_INPUT)
 
     def testExecute(self):
-        
         c = Calc()
 
         self.assertEqual(c.the_stack, [])
@@ -207,3 +203,11 @@ class TestCalc(unittest.TestCase):
         # multiple
         c = Calc()
         self.assertEqual(c.execute([2, 4, ADD]), 6)
+        c = Calc()
+        self.assertEqual(c.execute([2, ADD, 4]), ERR_OPS)
+        c = Calc()
+        self.assertEqual(c.execute([ADD, 2, 4]), ERR_OPS)
+        self.assertEqual(c.execute([ADD]), ERR_OPS)
+        self.assertEqual(c.execute([2]), 2)
+        self.assertEqual(c.execute([ADD, 4]), ERR_OPS)
+        self.assertEqual(c.execute([4, ADD]), 6)
