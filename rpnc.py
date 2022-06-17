@@ -1,4 +1,6 @@
 import unittest
+from io import StringIO
+from sys import stdin, stdout
 
 class Calc:
 
@@ -67,6 +69,54 @@ SUB = Operator("-", 2, lambda a, b: a - b)
 MUL = Operator("*", 2, lambda a, b: a * b)
 DIV = Operator("/", 2, lambda a, b: a / b)
 
+def clInterface(reader, writer):
+    calc = Calc()
+
+    writer.write("> ")
+    writer.flush()
+    for line in reader:
+        line = line.strip()
+        if line == "q":
+            return
+        writer.write("{}".format(calc.process(line)))
+        writer.write("\n> ")
+
+if __name__ == "__main__":
+    clInterface(stdin, stdout)
+
+class TestClInterface(unittest.TestCase):
+    def testClInterface(self):
+
+        cases = [
+            # exit
+            ["", "> "],
+            ["q\n", "> "],
+
+            # numbers
+            ["5\n", "> 5\n> "],
+            ["2\n4\n", "> 2\n> 4\n> "],
+
+            # operations
+            ["2\n4\n+\n", "> 2\n> 4\n> 6\n> "],
+            ["2\n4\n-\n", "> 2\n> 4\n> 2\n> "],
+            ["2\n4\n*\n", "> 2\n> 4\n> 8\n> "],
+            ["2\n4\n/\n", "> 2\n> 4\n> 2.0\n> "],
+
+            # chain
+            ["2\n4\n+\n10\n+\n", "> 2\n> 4\n> 6\n> 10\n> 16\n> "],
+
+            # examples
+            ["5\n8\n+\n", "> 5\n> 8\n> 13\n> "],
+            # ["5 8 +\n13 -", ""],
+            
+        ]
+
+        for i in range(len(cases)):
+            r = StringIO(cases[i][0])
+            w = StringIO()
+            clInterface(r, w)
+            self.assertEqual(w.getvalue(), cases[i][1])
+    
 class TestCalc(unittest.TestCase):
     def testParse(self):
         c = Calc()
