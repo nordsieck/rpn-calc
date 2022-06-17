@@ -88,10 +88,10 @@ class Operator:
         self.operands = operands
         self.fn = fn
 
-ADD = Operator("+", 2, lambda a, b: a + b)
-SUB = Operator("-", 2, lambda a, b: a - b)
-MUL = Operator("*", 2, lambda a, b: a * b)
-DIV = Operator("/", 2, lambda a, b: a / b)
+ADD = Operator("+", 2, lambda a, b: b + a)
+SUB = Operator("-", 2, lambda a, b: b - a)
+MUL = Operator("*", 2, lambda a, b: b * a)
+DIV = Operator("/", 2, lambda a, b: b / a)
 
 def clInterface(reader, writer):
     
@@ -124,19 +124,21 @@ class TestClInterface(unittest.TestCase):
 
             # operations
             ["2\n4\n+\n", "> 2\n> 4\n> 6\n> "],
-            ["2\n4\n-\n", "> 2\n> 4\n> 2\n> "],
+            ["2\n4\n-\n", "> 2\n> 4\n> -2\n> "],
             ["2\n4\n*\n", "> 2\n> 4\n> 8\n> "],
-            ["2\n4\n/\n", "> 2\n> 4\n> 2.0\n> "],
+            ["2\n4\n/\n", "> 2\n> 4\n> 0.5\n> "],
 
             # chain
             ["2\n4\n+\n10\n+\n", "> 2\n> 4\n> 6\n> 10\n> 16\n> "],
 
             # multiple
-            ["1 2 3 - /\n", "> -1\n> "],
+            ["1 2 3 - /\n", "> -1.0\n> "],
 
             # examples
             ["5\n8\n+\n", "> 5\n> 8\n> 13\n> "],
-            # ["5 8 +\n13 -", ""],
+            ["5 8 +\n13 -", "> 13\n> 0\n> "],
+            ["-3\n-2\n*\n5\n+\n", "> -3\n> -2\n> 6\n> 5\n> 11\n> "],
+            ["5\n9\n1\n-\n/\n", "> 5\n> 9\n> 1\n> 8\n> 0.625\n> "],
             
         ]
 
@@ -157,7 +159,7 @@ class TestCalc(unittest.TestCase):
 
         # -
         val = c.parse("-")[0]
-        self.assertEqual(val.fn(4, 2), 2)
+        self.assertEqual(val.fn(4, 2), -2)
 
         # *
         val = c.parse("*")[0]
@@ -165,7 +167,7 @@ class TestCalc(unittest.TestCase):
 
         # /
         val = c.parse("/")[0]
-        self.assertEqual(val.fn(4, 2), 2)
+        self.assertEqual(val.fn(4, 2), 0.5)
 
         # int
         self.assertEqual(c.parse("5")[0], 5)
@@ -185,9 +187,9 @@ class TestCalc(unittest.TestCase):
 
         # operators
         cases = [[ADD, 6],
-                 [SUB, 2],
+                 [SUB, -2],
                  [MUL, 8],
-                 [DIV, 2]]
+                 [DIV, 0.5]]
 
         for i in range(len(cases)):
             c.execute([2])
